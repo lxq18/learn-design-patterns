@@ -1,0 +1,51 @@
+针对一个request设置请求拦截器
+--org.springframework.web.servlet.DispatcherServlet
+HandlerExecutionChain mappedHandler = getHandler(processedRequest);
+
+private List<HandlerMapping> handlerMappings;
+HandlerExecutionChain handler = hm.getHandler(request);
+
+
+//public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMethodMapping<RequestMappingInfo> {
+--org.springframework.web.servlet.handler.AbstractHandlerMapping
+HandlerExecutionChain executionChain = getHandlerExecutionChain(handler, request);
+
+protected HandlerExecutionChain getHandlerExecutionChain(Object handler, HttpServletRequest request) {
+		HandlerExecutionChain chain = (handler instanceof HandlerExecutionChain ?
+				(HandlerExecutionChain) handler : new HandlerExecutionChain(handler));
+
+		String lookupPath = this.urlPathHelper.getLookupPathForRequest(request);
+		for (HandlerInterceptor interceptor : this.adaptedInterceptors) {
+			if (interceptor instanceof MappedInterceptor) {
+				MappedInterceptor mappedInterceptor = (MappedInterceptor) interceptor;
+				if (mappedInterceptor.matches(lookupPath, this.pathMatcher)) {
+					chain.addInterceptor(mappedInterceptor.getInterceptor());
+				}
+			}
+			else {
+				chain.addInterceptor(interceptor);
+			}
+		}
+		return chain;
+	}
+
+应用拦截器
+--org.springframework.web.servlet.DispatcherServlet
+if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+}
+boolean applyPreHandle(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    HandlerInterceptor[] interceptors = getInterceptors();
+    if (!ObjectUtils.isEmpty(interceptors)) {
+        for (int i = 0; i < interceptors.length; i++) {
+            HandlerInterceptor interceptor = interceptors[i];
+            if (!interceptor.preHandle(request, response, this.handler)) {
+                triggerAfterCompletion(request, response, null);
+                return false;
+            }
+            this.interceptorIndex = i;
+        }
+    }
+    return true;
+}
+
+
